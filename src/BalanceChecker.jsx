@@ -22,10 +22,7 @@ const BalanceChecker = ({ api, account }) => {
           account.address,
           (accountData) => {
             const free = accountData.data.free.toBigInt();
-            const formatted = formatBalance(free, {
-              withSi: true,
-              forceUnit: "-",
-            });
+
             setBalance({
               free: formatBalance(free, { forceUnit: "-", withSi: true }),
               reserved: formatBalance(accountData.data.reserved.toBigInt(), {
