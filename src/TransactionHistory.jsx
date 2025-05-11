@@ -3,10 +3,12 @@ import { useEffect, useState } from "react";
 
 const TransactionHistory = ({ api, account }) => {
   const [transactionHistory, setTransactionHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const getTransactionHistory = async () => {
       try {
+        setLoading(true);
         const chainDecimals = await api.registry.chainDecimals[0];
         const chainTokens = await api.registry.chainTokens[0];
 
@@ -14,9 +16,6 @@ const TransactionHistory = ({ api, account }) => {
           decimals: chainDecimals,
           unit: chainTokens,
         });
-
-        console.log("Chain Decimals:", chainDecimals);
-        console.log("Chain Tokens:", chainTokens);
 
         // Fetch the blockchain for the last 10 blocks
         const lastHeader = await api.rpc.chain.getHeader();
@@ -55,6 +54,7 @@ const TransactionHistory = ({ api, account }) => {
                   from: sender,
                   to: recipient,
                   amount,
+                  timestamp: new Date().toISOString(), // Using current time as placeholder
                 });
               }
             }
@@ -62,46 +62,92 @@ const TransactionHistory = ({ api, account }) => {
         }
 
         setTransactionHistory(history);
+        setLoading(false);
       } catch (error) {
         console.error("Error fetching transaction history:", error);
+        setLoading(false);
       }
     };
-    getTransactionHistory();
-  });
+
+    if (api && account) {
+      getTransactionHistory();
+    }
+
+    // Missing dependency array - add it to prevent infinite re-renders
+  }, [api, account]);
+
+  const formatAddress = (address) => {
+    return `${address.slice(0, 6)}...${address.slice(-6)}`;
+  };
 
   return (
-    <>
-      <h2>TransactionHistory</h2>
+    <div className="transaction-history-container">
+      <h2>Transaction History</h2>
 
-      {transactionHistory.length > 0 ? (
-        <table>
-          <thead>
-            <tr>
-              <th>Block Number</th>
-              <th>Hash</th>
-              <th>Type</th>
-              <th>From</th>
-              <th>To</th>
-              <th>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactionHistory.map((tx, index) => (
-              <tr key={index}>
-                <td>{tx.blockNumber}</td>
-                <td>{tx.hash}</td>
-                <td>{tx.type}</td>
-                <td>{tx.from}</td>
-                <td>{tx.to}</td>
-                <td>{tx.amount}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {loading ? (
+        <div className="loading">
+          <div></div>
+          <div></div>
+          <div></div>
+        </div>
+      ) : transactionHistory.length > 0 ? (
+        <div className="transactions-list">
+          {transactionHistory.map((tx, index) => (
+            <div
+              key={index}
+              className={`transaction ${
+                tx.type === "sent" ? "sent" : "received"
+              }`}
+            >
+              <div className="transaction-header">
+                <span className={`transaction-type ${tx.type}`}>
+                  {tx.type === "sent" ? "↑ Sent" : "↓ Received"}
+                </span>
+                <span className="transaction-block">
+                  Block: {tx.blockNumber}
+                </span>
+              </div>
+
+              <div className="transaction-details">
+                <div className="transaction-amount">
+                  {tx.type === "sent" ? "-" : "+"}
+                  {tx.amount}
+                </div>
+
+                <div className="transaction-addresses">
+                  <div className="transaction-from">
+                    <span className="label">From:</span>
+                    <span className="address" title={tx.from}>
+                      {formatAddress(tx.from)}
+                    </span>
+                  </div>
+                  <div className="transaction-to">
+                    <span className="label">To:</span>
+                    <span className="address" title={tx.to}>
+                      {formatAddress(tx.to)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="transaction-hash">
+                  <span className="label">Hash:</span>
+                  <span className="hash" title={tx.hash}>
+                    {formatAddress(tx.hash)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
-        <p>No transactions found.</p>
+        <div className="no-transactions">
+          <p>No transactions found in recent blocks.</p>
+          <p className="no-tx-hint">
+            Transactions will appear here once you send or receive tokens.
+          </p>
+        </div>
       )}
-    </>
+    </div>
   );
 };
 

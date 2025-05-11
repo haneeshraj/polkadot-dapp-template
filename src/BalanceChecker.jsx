@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
-
 import { formatBalance } from "@polkadot/util";
 
 const BalanceChecker = ({ api, account }) => {
   const [balance, setBalance] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let unsubscribe;
 
     const getBalance = async () => {
       try {
+        setLoading(true);
         const chainDecimals = await api.registry.chainDecimals[0];
         const chainTokens = await api.registry.chainTokens[0];
 
@@ -35,10 +36,12 @@ const BalanceChecker = ({ api, account }) => {
                 { forceUnit: "-", withSi: true }
               ),
             });
+            setLoading(false);
           }
         );
       } catch (error) {
         console.error("Error formatting balance:", error);
+        setLoading(false);
       }
     };
 
@@ -52,14 +55,51 @@ const BalanceChecker = ({ api, account }) => {
   return (
     <div className="balance-check">
       <h2>Balance</h2>
-      {balance ? (
-        <div>
-          <p>Free: {balance.free}</p>
-          <p>Reserved: {balance.reserved}</p>
-          <p>Total: {balance.total}</p>
+      {loading ? (
+        <div className="loading">
+          <div></div>
+          <div></div>
+          <div></div>
+        </div>
+      ) : balance ? (
+        <div className="balance-display">
+          <div className="balance-card">
+            <div className="balance-item">
+              <span className="balance-label">Free:</span>
+              <span className="balance-value">{balance.free}</span>
+            </div>
+            <div className="balance-item">
+              <span className="balance-label">Reserved:</span>
+              <span className="balance-value">{balance.reserved}</span>
+            </div>
+            <div className="balance-item total">
+              <span className="balance-label">Total:</span>
+              <span className="balance-value">{balance.total}</span>
+            </div>
+          </div>
+          <div className="account-info">
+            <div className="account-address">
+              <span className="label">Address:</span>
+              <span
+                className="value"
+                title={account.address}
+              >{`${account.address.slice(0, 6)}...${account.address.slice(
+                -6
+              )}`}</span>
+              <button
+                className="copy-button"
+                onClick={() => {
+                  navigator.clipboard.writeText(account.address);
+                  alert("Address copied to clipboard");
+                }}
+              >
+                Copy
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
-        <p>Loading...</p>
+        <p>Unable to fetch balance</p>
       )}
     </div>
   );
